@@ -1,43 +1,61 @@
-from pages.base_page import BasePage
-from utils.webdriver import WebDriver
+import random
 
 from selenium.webdriver.common.by import By
-
 from selenium.webdriver.common.keys import Keys
 
+from objects_path.home_page_objects import HomePageObjects
+from pages.base_page import BasePage
 
-class HomePage(BasePage):
 
-    WEB_BODY = (By.CSS_SELECTOR, "body")
-    EXPECTED_TEXT = "SUBSCRIPTION"
-    ACTUAL_TEXT = (By.XPATH, "//div[@class='single-widget']//h2[contains(text(), 'Subscription')]")
-    SUBSCRIBE_INPUT_FIELD = (By.ID, "susbscribe_email")
-    ARROW_BTN = (By.ID, "subscribe")
-    SUCCESS_MSG = (By.XPATH, "//div[contains(text(), 'You have been successfully subscribed!')]")
+class HomePage(BasePage, HomePageObjects):
 
     def load_home_page(self):
         super().driver.get('http://automationexercise.com')
         super().driver.implicitly_wait(10)
 
-    def home_page_is_visible(self):
-        is_home_page_visible = super().driver.execute_script("return document.readyState === 'complete';")
-        assert is_home_page_visible, "The page is not visible or still loading."
+    def visibility_of_home_page(self):
+        return super().driver.execute_script("return document.readyState === 'complete';")
 
     def scroll_to_footer(self):
-        super().find(self.WEB_BODY).send_keys(Keys.CONTROL + Keys.END)
+        super().find(super().WEB_BODY).send_keys(Keys.CONTROL + Keys.END)
 
-    def verify_text(self):
-        actual_text = super().find(self.ACTUAL_TEXT).text
-        assert self.EXPECTED_TEXT == actual_text, f"Actual text {actual_text} is different from {self.EXPECTED_TEXT}"
+    def visibility_of_SUBSCRIPTION_text(self):
+        return super().find(super().ACTUAL_TEXT).is_displayed()
 
     def subscribe(self, email):
-        super().find(self.SUBSCRIBE_INPUT_FIELD).send_keys(email)
-        super().find(self.ARROW_BTN).click()
+        super().find(super().SUBSCRIBE_INPUT_FIELD).send_keys(email)
+        super().find(super().ARROW_BTN).click()
 
-    def verify_success_message(self):
+    def visibility_of_success_message(self):
+        super().wait_for_visibility_of(super().SUCCESS_MSG)
+        success_message = super().find(super().SUCCESS_MSG)
+        return success_message.is_displayed()
+
+
+    def check_recommended_items_visibility(self):
         try:
-            success_message = self.wait_for_visibility_of(self.SUCCESS_MSG)
-            assert success_message.is_displayed(), "Success message is not visible"
+            return super().find(super().RECOMMENDED_ITEMS).is_displayed()
+        except:
+            return False
 
-        except AssertionError:
-            print("Success message is not visible")
+    def add_to_cart_recommended_product(self):
+        id_elements = super().find_elements(super().CAROUSEL_RECOMMENDED_PRODUCTS)
+
+        id_list = []
+
+        for element in id_elements:
+            anchor_element = element.find_element(By.CSS_SELECTOR, 'a[data-product-id]')
+            attribute_value = anchor_element.get_attribute("data-product-id")
+            integer_value = int(attribute_value)
+            id_list.append(integer_value)
+
+        min_id = min(id_list)
+        max_id = max(id_list)
+        random_id = random.randint(min_id, max_id)
+
+        product_name = super().driver.find_element(By.XPATH, f"//div[@class='item active']//a[@data-product-id='{random_id}']/preceding-sibling::p").text
+        super().driver.find_element(By.XPATH, f"//div[@class='item active']/div/div/div/div/a[@data-product-id='{random_id}']").click()  # clicks add to cart button
+        return product_name
+
+    def click_view_cart(self):
+        super().find(super().VIEW_CART_BTN).click()
